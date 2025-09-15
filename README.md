@@ -1,2 +1,2 @@
-# chickenPoo.github.io
-stuff :o
+# Iron-Frontiers-A-Global-Wargame
+the home of Iron Frontiers: A Global Wargame try out the game once its finished... or dont...

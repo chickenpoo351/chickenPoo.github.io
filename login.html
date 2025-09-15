@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Iron Frontiers</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="login.css">
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap" rel="stylesheet">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="images/favicon-16.png" sizes="16x16" type="image/png">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-container">
+      <div class="nav-logo">Iron Frontiers</div>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="#">Updates</a></li>
+        <li><a href="sign-up.html">Sign-up</a></li>
+        <li><a href="#">Login</a></li>
+      </ul>
+    </div>
+  </nav>
+  <div class="center-content">
+    <div>
+      <form class="login-container" action="/login" method="post">
+          <h2>Login</h2>
+          <label for="username">Email</label>
+          <input type="text" id="username" name="username" required autocomplete="username">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password">
+          <button type="submit">Sign In</button>
+      </form>
+      <div class="alt-box">
+          <p>No account? Create one today!</p>
+          <a href="sign-up.html"><button class="alt-btn">Create account</button></a>
+      </div>
+    </div>
+  </div>
+  <script>
+document.querySelector('form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  window.location.href = 'Main-Game.html';
+});
+</script>
+    <!-- Footer -->
+    <footer>
+        © 2025 Iron Frontiers. All rights reserved.
+    </footer>
+</body>
+</html>
