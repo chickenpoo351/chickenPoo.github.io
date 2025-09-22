@@ -1,153 +1,166 @@
-const mapImg = document.getElementById('world-map');
-const canvas = document.getElementById('border-canvas');
-const viewport = document.getElementById('map-viewport');
-const popup = document.getElementById('info-popup');
 
-let offsetX = 0;
-let offsetY = 0;
+function getCountryGroup(el) {
+  let current = el.parentNode;
+
+  while (current && current.tagName === 'g') {
+    if (current.id && !current.id.endsWith('-Continent') && current.id !== 'layer1') {
+      return current; // found the country group
+    }
+    current = current.parentNode; // keep going up
+  }
+
+  return null; // fallback → means path is the country itself
+}
+
+document.querySelectorAll('#map-borders path').forEach(path => {
+  path.addEventListener('mouseenter', () => {
+    let countryGroup = getCountryGroup(path);
+    if (countryGroup) {
+      countryGroup.classList.add('highlight');
+    } else {
+      path.classList.add('highlight');
+    }
+  });
+
+  path.addEventListener('mouseleave', () => {
+    let countryGroup = getCountryGroup(path);
+    if (countryGroup) {
+      countryGroup.classList.remove('highlight');
+    } else {
+      path.classList.remove('highlight');
+    }
+  });
+});
+
+const container = document.getElementById("map-container");
+const wrapper = document.getElementById("zoom-wrapper");
+
+const mapWidth = 4096;
+const mapHeight = 3044;
+
 let scale = 1;
-const minScale = 1; // 100% is the minimum
-const maxScale = 3; // You can adjust this for preferred max zoom
-const scaleStep = 0.1;
+let translateX = 0, translateY = 0;
+const maxScale = 3;
 
-// Always keep image and canvas at viewport size
-function resizeMapElements() {
-  mapImg.style.width = `${window.innerWidth}px`;
-  mapImg.style.height = `${window.innerHeight}px`;
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  canvas.style.width = `${window.innerWidth}px`;
-  canvas.style.height = `${window.innerHeight}px`;
-  viewport.style.width = `${window.innerWidth}px`;
-  viewport.style.height = `${window.innerHeight}px`;
-}
-window.addEventListener('resize', () => {
-  resizeMapElements();
-  setInitialZoomAndPosition();
-});
-mapImg.onload = () => {
-  resizeMapElements();
-  setInitialZoomAndPosition();
-};
-if (mapImg.complete) {
-  resizeMapElements();
-  setInitialZoomAndPosition();
-}
+// --- helpers ---
+function getMinScale() {
+  const rect = container.getBoundingClientRect();
+  const aspectRatio = rect.width / rect.height;
+  const mapAspectRatio = mapWidth / mapHeight;
 
-function setInitialZoomAndPosition() {
-  scale = minScale;
-  offsetX = 0;
-  offsetY = 0;
-  updateTransform();
-}
-
-function clampOffsets() {
-  if (scale === minScale) {
-    offsetX = 0;
-    offsetY = 0;
-    return;
-  }
-  // The visible area is always window.innerWidth/Height
-  // When zoomed in, the map is larger than the viewport
-  const maxPanX = (window.innerWidth * (scale - 1)) / 2;
-  const maxPanY = (window.innerHeight * (scale - 1)) / 2;
-  offsetX = Math.max(-maxPanX, Math.min(maxPanX, offsetX));
-  offsetY = Math.max(-maxPanY, Math.min(maxPanY, offsetY));
-}
-
-function updateTransform() {
-  viewport.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
-}
-
-// Mouse wheel zoom
-viewport.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const oldScale = scale;
-  if (e.deltaY < 0) {
-    scale = Math.min(maxScale, scale + scaleStep);
+  if (aspectRatio >= 1) {
+    // landscape → must at least fill width
+    return rect.width / mapWidth;
   } else {
-    scale = Math.max(minScale, scale - scaleStep);
+    // portrait → must at least fill height
+    return rect.height / mapHeight;
   }
-  // Zoom towards mouse pointer
-  const rect = viewport.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-  offsetX -= (mx - window.innerWidth / 2) * (scale - oldScale) / scale;
-  offsetY -= (my - window.innerHeight / 2) * (scale - oldScale) / scale;
-  clampOffsets();
-  updateTransform();
-});
+}
 
-// Keyboard zoom
-document.addEventListener('keydown', (e) => {
-  if (e.key === '+' || e.key === '=') {
-    scale = Math.min(maxScale, scale + scaleStep);
-    clampOffsets();
-    updateTransform();
-  }
-  if (e.key === '-' || e.key === '_') {
-    scale = Math.max(minScale, scale - scaleStep);
-    clampOffsets();
-    updateTransform();
-  }
-});
+function applyTransform() {
+  const rect = container.getBoundingClientRect();
+  const wrapperWidth = mapWidth * scale;
+  const wrapperHeight = mapHeight * scale;
 
-// Touch pinch zoom logic
-let lastTouchDist = 0;
-let lastTouchScale = 1;
-viewport.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 2) {
-    lastTouchDist = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
-    lastTouchScale = scale;
-  }
-});
-viewport.addEventListener('touchmove', (e) => {
+  // clamp scale
+  const minScale = getMinScale();
+  scale = Math.max(minScale, Math.min(maxScale, scale));
+
+  // bounds
+  const maxX = 0;
+  const maxY = 0;
+  const minX = rect.width - wrapperWidth;
+  const minY = rect.height - wrapperHeight;
+
+  // clamp translation but don’t force recenter
+  translateX = Math.min(maxX, Math.max(minX, translateX));
+  translateY = Math.min(maxY, Math.max(minY, translateY));
+
+  wrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+}
+
+// --- mouse zoom ---
+container.addEventListener("wheel", e => {
   e.preventDefault();
-  if (e.touches.length === 2) {
-    const dist = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
-    let newScale = lastTouchScale * (dist / lastTouchDist);
-    newScale = Math.max(minScale, Math.min(maxScale, newScale));
-    scale = newScale;
-    clampOffsets();
-    updateTransform();
+  const rect = container.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  const prevScale = scale;
+  const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+  scale *= zoomFactor;
+
+  // keep mouse position stable
+  translateX = mouseX - (mouseX - translateX) * (scale / prevScale);
+  translateY = mouseY - (mouseY - translateY) * (scale / prevScale);
+
+  applyTransform();
+});
+
+// --- mouse drag ---
+let isDragging = false, lastX, lastY;
+
+container.addEventListener("mousedown", e => {
+  isDragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
+
+container.addEventListener("mousemove", e => {
+  if (!isDragging) return;
+  translateX += e.clientX - lastX;
+  translateY += e.clientY - lastY;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  applyTransform();
+});
+
+container.addEventListener("mouseup", () => isDragging = false);
+container.addEventListener("mouseleave", () => isDragging = false);
+
+// --- touch support ---
+let touchStartDist = 0;
+let initialScale = 1;
+
+container.addEventListener("touchstart", e => {
+  if (e.touches.length === 1) {
+    // one finger → drag
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+  } else if (e.touches.length === 2) {
+    // two fingers → pinch zoom
+    const dx = e.touches[1].clientX - e.touches[0].clientX;
+    const dy = e.touches[1].clientY - e.touches[0].clientY;
+    touchStartDist = Math.hypot(dx, dy);
+    initialScale = scale;
   }
 });
-viewport.addEventListener('touchend', (e) => {
-  // No action needed for this case
-});
 
-// Drag panning
-let isDragging = false;
-let dragStartX = 0;
-let dragStartY = 0;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
+container.addEventListener("touchmove", e => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    // drag
+    translateX += e.touches[0].clientX - lastX;
+    translateY += e.touches[0].clientY - lastY;
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+  } else if (e.touches.length === 2) {
+    // pinch zoom
+    const dx = e.touches[1].clientX - e.touches[0].clientX;
+    const dy = e.touches[1].clientY - e.touches[0].clientY;
+    const newDist = Math.hypot(dx, dy);
+    scale = initialScale * (newDist / touchStartDist);
+  }
+  applyTransform();
+}, { passive: false });
 
-viewport.addEventListener('mousedown', (e) => {
-  if (scale === minScale) return; // Don't allow panning at min zoom
-  isDragging = true;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-  dragOffsetX = offsetX;
-  dragOffsetY = offsetY;
-});
+// --- initial fit ---
+function fitMapToContainer() {
+  scale = getMinScale();
+  translateX = 0;
+  translateY = 0;
+  applyTransform();
+}
 
-window.addEventListener('mousemove', (e) => {
-  if (!isDragging) return;
-  offsetX = dragOffsetX + (e.clientX - dragStartX);
-  offsetY = dragOffsetY + (e.clientY - dragStartY);
-  clampOffsets();
-  updateTransform();
-});
-
-window.addEventListener('mouseup', () => {
-  isDragging = false;
-});
-
-updateTransform();
+window.addEventListener("load", fitMapToContainer);
+window.addEventListener("resize", fitMapToContainer);

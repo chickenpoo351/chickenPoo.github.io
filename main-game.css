@@ -1,29 +1,87 @@
-/* Make the map and canvas fill the viewport */
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+    }
 
-body {
-  background: #111;
-}
+    #map-container {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      /* important for bounds */
+      position: relative;
+    }
 
-.map-container, #map-viewport {
+    #zoom-wrapper {
+      transform-origin: 0 0;
+      /* transformations are relative to top-left */
+      position: absolute;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+      ;
+    }
+
+    #map-image {
+      display: block;
+      width: 4096px;
+      height: 3044px;
+      overflow: hidden;
+    }
+
+    #map-borders {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4096px;
+      height: 3044px;
+    }
+
+    #map-container {
+      user-select: none;
+    }
+
+
+
+    /* Base styles for all paths */
+    #map-borders path {
+      fill: transparent;
+      stroke: transparent;
+      stroke-width: 2;
+      cursor: pointer;
+      transition: fill 0.2s, stroke 0.2s;
+    }
+
+    /* Highlight effect (for single paths or grouped countries) */
+    #map-borders path.highlight,
+    #map-borders g.highlight path {
+      fill: rgba(255, 166, 0, 0.4);
+      /* orange tint */
+      stroke: rgb(255, 134, 35);
+      stroke-opacity: 1;
+    }
+
+    /* Optional: "selected" state if you add clicks later */
+    #map-borders path.selected,
+    #map-borders g.selected path {
+      fill: rgba(255, 247, 232, 0.5);
+      stroke: rgb(0, 0, 0);
+      stroke-opacity: 1;
+    }
+
+    /* Info window styles */
+    .info-window {
   position: absolute;
-  top: 0; left: 0;
+  top: 20px;
+  right: 20px;
+  width: 200px;
+  background: white;
+  border: 1px solid #aaa;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.flag {
   width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-#world-map, #border-canvas {
-  position: absolute;
-  top: 0; left: 0;
-  object-fit: cover;
-}
-
-#info-popup {
-  z-index: 10;
+  border-radius: 4px;
 }
